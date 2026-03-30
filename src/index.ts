@@ -13,6 +13,8 @@ import { HawkesVpinForecastService } from "./services/hawkes-vpin-forecast.servi
 import { BayesianBvcService } from "./services/bayesian-bvc.service";
 import { CrossVenueContagionService } from "./services/cross-venue-contagion.service";
 import { SpectralRadiusService } from "./services/spectral-radius.service";
+import { InstrumentHawkesService } from "./services/instrument-hawkes.service";
+import { BranchingThresholdsService } from "./services/branching-thresholds.service";
 import { HealthResponse } from "./types";
 
 const app = express();
@@ -29,6 +31,8 @@ const hawkesVpin = new HawkesVpinForecastService();
 const bayesianBvc = new BayesianBvcService();
 const contagion = new CrossVenueContagionService();
 const spectral = new SpectralRadiusService();
+const instrumentHawkes = new InstrumentHawkesService();
+const branchingThresholds = new BranchingThresholdsService();
 
 // ── Loop State ────────────────────────────────────────────────────────────
 
@@ -196,6 +200,18 @@ app.get("/contagion/spectral", (_req, res) => {
   res.json(spectral.getState());
 });
 
+// ── Instrument-Specific Hawkes Endpoint (v9.2 Bonus) ──────────────────
+
+app.get("/contagion/instrument", (_req, res) => {
+  res.json(instrumentHawkes.getState());
+});
+
+// ── Branching Thresholds Endpoint (v9.2 Bonus) ────────────────────────
+
+app.get("/contagion/branching", (_req, res) => {
+  res.json(branchingThresholds.getState());
+});
+
 // ── Master v9.2 Dashboard ───────────────────────────────────────────────
 
 app.get("/v92/status", (_req, res) => {
@@ -208,6 +224,8 @@ app.get("/v92/status", (_req, res) => {
     bayesianBvc: bayesianBvc.getState(),
     contagion: contagion.getState(),
     spectral: spectral.getState(),
+    instrumentHawkes: instrumentHawkes.getState(),
+    branchingThresholds: branchingThresholds.getState(),
     vpin: { instruments: vpinEngine.getInstrumentCount(), buckets: vpinEngine.getTotalBuckets() },
     toxicity: classifier.getStats(),
     advisory: emitter.getStats(),
@@ -223,9 +241,9 @@ app.listen(PORT, () => {
   console.log("  VPIN Flow Toxicity Predictor — v9.2 POLISHED");
   console.log("  Spark #007 — GCHQ lens Final Polish");
   console.log(`  Port: ${PORT}`);
-  console.log("  Endpoints: 21 (health 4, vpin 4, toxicity 4, advisory 4, v9.2 5)");
+  console.log("  Endpoints: 23 (health 4, vpin 4, toxicity 4, advisory 4, v9.2 5, bonus 2)");
   console.log("  Loops: 3 (bucket 10s, classify 30s, broadcast 60s)");
-  console.log("  v9.2: Hawkes VPIN + Bayesian BVC + Contagion + Spectral Radius");
+  console.log("  v9.2: Hawkes VPIN + Bayesian BVC + Contagion + Spectral Radius + Instrument Hawkes + Branching Thresholds");
   console.log("  Deployment Class: INTEL, DEFENCE");
   console.log("═══════════════════════════════════════════════════════════");
 
