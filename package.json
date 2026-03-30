@@ -1,7 +1,7 @@
 {
   "name": "genesis-toxicity-oracle",
-  "version": "1.0.0",
-  "description": "WD-036 — Toxicity Oracle: VPIN Flow Toxicity Predictor (Spark #007 GCHQ lens)",
+  "version": "9.2.0",
+  "description": "WD-036 — Toxicity Oracle: VPIN Flow Toxicity Predictor v9.2 POLISHED (Spark #007 GCHQ lens)",
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc",

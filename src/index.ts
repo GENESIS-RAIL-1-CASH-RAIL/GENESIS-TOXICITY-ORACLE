@@ -1,14 +1,18 @@
 // ─── GENESIS TOXICITY ORACLE — WD-036 ───────────────────────────────────────
 // VPIN Flow Toxicity Predictor — Volume-clock bucketing + autocorrelation
-// Port 8858 | 16 Endpoints | 3 Loops
-// Spark #007 — GCHQ lens (Grok, 2026-03-26)
-// Academic: Easley, López de Prado & O'Hara (2012) — VPIN predicts flash crashes
+// Port 8858 | 21 Endpoints | 3 Loops
+// Spark #007 v9.2 — GCHQ lens Final Polish (2026-03-30)
+// Academic: Easley et al. (2012), Hawkes (1971), Bremaud & Massoulie (1996)
 // ─────────────────────────────────────────────────────────────────────────────
 
 import express from "express";
 import { VpinEngineService } from "./services/vpin-engine.service";
 import { ToxicityClassifierService } from "./services/toxicity-classifier.service";
 import { AdvisoryEmitterService } from "./services/advisory-emitter.service";
+import { HawkesVpinForecastService } from "./services/hawkes-vpin-forecast.service";
+import { BayesianBvcService } from "./services/bayesian-bvc.service";
+import { CrossVenueContagionService } from "./services/cross-venue-contagion.service";
+import { SpectralRadiusService } from "./services/spectral-radius.service";
 import { HealthResponse } from "./types";
 
 const app = express();
@@ -21,6 +25,10 @@ const startTime = Date.now();
 const vpinEngine = new VpinEngineService();
 const classifier = new ToxicityClassifierService(vpinEngine);
 const emitter = new AdvisoryEmitterService();
+const hawkesVpin = new HawkesVpinForecastService();
+const bayesianBvc = new BayesianBvcService();
+const contagion = new CrossVenueContagionService();
+const spectral = new SpectralRadiusService();
 
 // ── Loop State ────────────────────────────────────────────────────────────
 
@@ -59,7 +67,7 @@ app.get("/health", (_req, res) => {
   const advStats = emitter.getStats();
   const response: HealthResponse = {
     service: "GENESIS-TOXICITY-ORACLE",
-    version: "1.0.0",
+    version: "9.2.0",
     port: PORT,
     status: stats.toxic > 5 ? "RED" : stats.toxic > 0 ? "YELLOW" : "GREEN",
     uptime: Date.now() - startTime,
@@ -162,16 +170,62 @@ app.post("/advisory/manual", async (_req, res) => {
   res.json({ emitted: adjustments.length, adjustments });
 });
 
+// ── Hawkes VPIN Forecast Endpoint (v9.2) ────────────────────────────────
+
+app.get("/vpin/forecast", (_req, res) => {
+  const forecasts = hawkesVpin.forecast();
+  res.json({ forecasts, state: hawkesVpin.getState() });
+});
+
+// ── Bayesian BVC Endpoint (v9.2) ────────────────────────────────────────
+
+app.get("/vpin/bvc", (_req, res) => {
+  res.json(bayesianBvc.getState());
+});
+
+// ── Cross-Venue Contagion Endpoint (v9.2) ───────────────────────────────
+
+app.get("/contagion/matrix", (_req, res) => {
+  res.json(contagion.getState());
+});
+
+// ── Spectral Radius Endpoint (v9.2) ────────────────────────────────────
+
+app.get("/contagion/spectral", (_req, res) => {
+  const sr = spectral.computeSpectralRadius();
+  res.json(spectral.getState());
+});
+
+// ── Master v9.2 Dashboard ───────────────────────────────────────────────
+
+app.get("/v92/status", (_req, res) => {
+  res.json({
+    service: "GENESIS-TOXICITY-ORACLE",
+    version: "9.2.0",
+    spark: "#007 GCHQ v9.2 Final Polish",
+    uptime: Date.now() - startTime,
+    hawkesVpin: hawkesVpin.getState(),
+    bayesianBvc: bayesianBvc.getState(),
+    contagion: contagion.getState(),
+    spectral: spectral.getState(),
+    vpin: { instruments: vpinEngine.getInstrumentCount(), buckets: vpinEngine.getTotalBuckets() },
+    toxicity: classifier.getStats(),
+    advisory: emitter.getStats(),
+    loops,
+  });
+});
+
 // ── Boot ──────────────────────────────────────────────────────────────────
 
 app.listen(PORT, () => {
   console.log("═══════════════════════════════════════════════════════════");
   console.log("  GENESIS TOXICITY ORACLE — WD-036");
-  console.log("  VPIN Flow Toxicity Predictor");
-  console.log("  Spark #007 — GCHQ lens");
+  console.log("  VPIN Flow Toxicity Predictor — v9.2 POLISHED");
+  console.log("  Spark #007 — GCHQ lens Final Polish");
   console.log(`  Port: ${PORT}`);
-  console.log("  Endpoints: 16 (health 4, vpin 4, toxicity 4, advisory 4)");
+  console.log("  Endpoints: 21 (health 4, vpin 4, toxicity 4, advisory 4, v9.2 5)");
   console.log("  Loops: 3 (bucket 10s, classify 30s, broadcast 60s)");
+  console.log("  v9.2: Hawkes VPIN + Bayesian BVC + Contagion + Spectral Radius");
   console.log("  Deployment Class: INTEL, DEFENCE");
   console.log("═══════════════════════════════════════════════════════════");
 
